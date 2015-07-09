@@ -1,0 +1,67 @@
+{
+  "name": "openxmlbuilder",
+  "title": "OpenXmlBuilder",
+  "version": "0.1.0",
+  "description": "The OpenXmlBuilder allows you to build simple OpenXml documents right in the browser.",
+  "keywords": [
+    "openxml"
+  ],
+  "homepage": "https://github.com/jmgore75/openxmlbuilder",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/jmgore75/openxmlbuilder/blob/master/LICENSE"
+    }
+  ],
+  "contributors": [
+    {
+      "name": "Jeremy Gore",
+      "email": "jmgore75@gmail.com"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jmgore75/openxmlbuilder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jmgore75/openxmlbuilder/issues"
+  },
+  "dependencies": {
+    "send": "0"
+  },
+  "devDependencies": {
+    "grunt": "^0.4.4",
+    "grunt-chmod": "^1.0.3",
+    "grunt-contrib-clean": "^0.5.0",
+    "grunt-contrib-concat": "^0.4.0",
+    "grunt-contrib-connect": "^0.7.1",
+    "grunt-contrib-jshint": "^0.10.0",
+    "grunt-contrib-qunit": "^0.4.0",
+    "grunt-contrib-uglify": "^0.4.0",
+    "grunt-contrib-watch": "^0.6.1",
+    "grunt-template": "^0.2.3",
+    "jquery": "^1.11.1",
+    "qunit-composite": "^1.0.1",
+    "qunitjs": "^1.14.0",
+    "spm": "^3.0.0"
+  },
+  "main": "./dist/OpenXmlBuilder.js",
+  "bowermain": [
+    "./dist/OpenXmlBuilder.js"
+  ],
+  "component": {
+    "scripts": {
+      "openxmlbuilder": "./dist/OpenXmlBuilder.js"
+    }
+  },
+  "spm": {
+    "main": "OpenXmlBuilder.js",
+    "output": [
+      "OpenXmlBuilder.Core.js"
+    ]
+  },
+  "scripts": {
+    "test": "grunt travis --verbose",
+    "postpublish": "spm publish"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "openxmlbuilder/openxmlbuilder",
+  "description": "The OpenXmlBuilder allows you to build simple OpenXml documents right in the browser.",
+  "version": "0.1.0",
+  "type": "library",
+  "keywords": ["openxml"],
+  "license": "MIT",
+  "authors": [{"name":"Jeremy Gore","email":"jmgore75@gmail.com","role":"Developer"}],
+  "homepage": "https://github.com/jmgore75/openxmlbuilder",
+  "support": {
+    "source": "https://github.com/jmgore75/openxmlbuilder.git",
+    "issues": "https://github.com/jmgore75/openxmlbuilder/issues"
+  }
+}
