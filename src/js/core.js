@@ -1,5 +1,6 @@
 /* globals JSZip */
 var OpenXmlBuilder = {}; 
+OpenXmlBuilder.version = "<%= version %>"; 
 
 var ox = {}; 
 ox.xmlns = "http://www.w3.org/2000/xmlns/";
