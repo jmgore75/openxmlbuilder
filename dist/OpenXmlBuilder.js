@@ -357,12 +357,14 @@
     });
     this.parts = {};
     created = created || new Date();
-    title = title || "Document " + openXmlISOString(created);
+    created = openXmlISOString(created);
+    title = title || "Document " + created;
     creator = creator || "OpenXmlBuilder";
     this.ctDoc = new XDoc(this.zip.file("[Content_Types].xml").asText());
     var core = this.getPart("/docProps/core.xml").xdoc;
-    core.one("//dcterms:created").setValue(openXmlISOString(created));
-    core.one("//dcterms:modified").setValue(openXmlISOString(created));
+    core.one("//dcterms:created").setValue(created);
+    core.one("//dcterms:modified").setValue(created);
+    core.one("//cp:revision").setValue("1");
     if (title) {
       var titleElement = core.one("//dc:title");
       if (titleElement) {
@@ -371,10 +373,8 @@
         core.root().add(core.el("dc:title", title));
       }
     }
-    if (creator) {
-      core.one("//dc:creator").setValue(creator);
-      core.one("//cp:lastModifiedBy").setValue(creator);
-    }
+    core.one("//dc:creator").setValue(creator);
+    core.one("//cp:lastModifiedBy").setValue(creator);
   }
   XPkg.prototype = {
     getPart: function(path) {
