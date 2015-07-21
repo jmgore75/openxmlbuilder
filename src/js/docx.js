@@ -14,9 +14,13 @@ function DOCXBuilder (b64Template, title, created, creator) {
     XPkg.call(this, b64Template, title, created, creator); 
     this.doc = this.getPart("/word/document.xml"); 
     this.body = this.doc.one("/w:document/w:body"); 
+    this.sectPr = this.body.one("./w:sectPr"); 
     var es = this.body.all("./*"); 
     for (var i = 0; i < es.length; i++) {
         es[i].remove(); 
+    }
+    if (this.sectPr) {
+        this.body.add(this.sectPr); 
     }
 }
 DOCXBuilder.prototype = {
@@ -104,14 +108,14 @@ DOCXBuilder.prototype = {
         var seg = convertHtml(html); 
         if (seg.length === 1 && seg[0].type === "paragraph") {
             seg = seg[0]; 
-            this._paragraph(this.body, seg, pStyle, rStyle); 
+            this._paragraph(this.body, this.sectPr, seg, pStyle, rStyle); 
         } else {
             throw "Content is too complex"; 
         } 
     }, 
     docContent : function (html) {
         var blocks = convertHtml(html); 
-        this._blocks(this.body, blocks); 
+        this._blocks(this.body, this.sectPr, blocks); 
     }, 
     docChunk : function (html) {
         html = "<html><head></head><body>" + html + "</body></html>"; 
@@ -120,14 +124,14 @@ DOCXBuilder.prototype = {
         this.addFile("text/html", uri, html); 
         this.doc.addRelationship(rId, relTypes.aFChunk, uri, "Internal"); 
         var chunk = this.doc.el("w:altChunk").setAttr("r:id", rId); 
-        this.body.add(chunk);
+        this.body.add(chunk, this.sectPr);
     },
     /*jshint -W071 */
     /*jshint -W072 */
-    _block : function (parent, block, listid, level) {
+    _block : function (parent, before, block, listid, level) {
         var pPrs; 
         if (block.type === "table") {
-            this._table(parent, block); 
+            this._table(parent, before, block); 
         } else if (block.type === "list") {
             if (!listid) {
                 listid = block.listType === "ul" ? this.makeUl() : this.makeOlHier(); 
@@ -135,22 +139,22 @@ DOCXBuilder.prototype = {
             } else {
                 level += 1; 
             }
-            this._blocks(parent, block.blocks, listid, level); 
+            this._blocks(parent, before, block.blocks, listid, level); 
         } else if (block.type === "list-item" && listid) {
             pPrs = this.doc.el("w:numPr"); 
             pPrs.add(_valBuild("w:ilvl", level)(this.doc.xdoc)); 
             pPrs.add(_valBuild("w:numId", listid)(this.doc.xdoc)); 
-            this._paragraph(parent, block, null, null, pPrs); 
+            this._paragraph(parent, before, block, null, null, pPrs); 
         } else if (listid) {
             pPrs = this.doc.el("w:ind").setAttr("w:left", this._levelIndent(level)); 
-            this._paragraph(parent, block, this.pStyleListParagraph, null, pPrs); 
+            this._paragraph(parent, before, block, this.pStyleListParagraph, null, pPrs); 
         } else {
-            this._paragraph(parent, block); 
+            this._paragraph(parent, before, block); 
         }
     }, 
-    _blocks : function (parent, blocks, listid, level) {
+    _blocks : function (parent, before, blocks, listid, level) {
         for (var i = 0; i < blocks.length; i++) {
-            this._block(parent, blocks[i], listid, level); 
+            this._block(parent, before, blocks[i], listid, level); 
         }
     },
     _runs : function (parent, runs, rStyle) {
@@ -197,7 +201,7 @@ DOCXBuilder.prototype = {
             parent.add(r); 
         }
     },
-    _paragraph : function (parent, paragraph, pStyle, rStyle, pPrs) {
+    _paragraph : function (parent, before, paragraph, pStyle, rStyle, pPrs) {
         var p, pPr; 
         p = this.doc.el("w:p"); 
         if (pStyle || rStyle || pPrs) {
@@ -219,9 +223,9 @@ DOCXBuilder.prototype = {
             p.add(pPr); 
         }
         this._runs(p, paragraph.runs, rStyle); 
-        parent.add(p); 
+        parent.add(p, before); 
     }, 
-    _table : function (parent, table) {
+    _table : function (parent, before, table) {
         var i, j, row, cell, r, c, e, cspan, rspan, cind; 
         var tbl = this.doc.el("w:tbl"); 
         /*
@@ -296,7 +300,7 @@ DOCXBuilder.prototype = {
             tbl.add(r); 
         }
         
-        parent.add(tbl); 
+        parent.add(tbl, before); 
     }
 };
 /*jshint +W071 */
