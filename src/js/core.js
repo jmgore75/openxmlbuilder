@@ -209,7 +209,7 @@ XNode.prototype = {
     }, 
     add : function (el, before) {
         if (before) {
-            this.node.insertBefore(el.node); 
+            this.node.insertBefore(el.node, before.node); 
         } else {
             this.node.appendChild(el.node); 
         }
@@ -297,10 +297,10 @@ function XPart(xpkg, contentType, path, xmlStr, relsXmlStr) {
     } else {
         var f = this.xpkg.zip.file(this.path.slice(1)); 
         if (f) {
-            this.xdoc = new XDoc(f.asBinary()); 
+            this.xdoc = new XDoc(f.asText()); 
             f = this.xpkg.zip.file(this.relsPath.slice(1)); 
             if (f) {
-                this.relsXdoc = new XDoc(f.asBinary()); 
+                this.relsXdoc = new XDoc(f.asText()); 
             }
         }
     }
@@ -376,7 +376,7 @@ function XPkg (b64Template, title, created, creator) {
     title = title || "Document " + openXmlISOString(created); 
     creator = creator || "OpenXmlBuilder"; 
     
-    this.ctDoc = new XDoc(this.zip.file("[Content_Types].xml").asBinary()); 
+    this.ctDoc = new XDoc(this.zip.file("[Content_Types].xml").asText()); 
     
     var core = this.getPart("/docProps/core.xml").xdoc; 
     core.one("//dcterms:created").setValue(openXmlISOString(created)); 
