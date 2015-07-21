@@ -36,7 +36,7 @@ module.exports = function(grunt) {
           "pptx": "src/templates/template.pptx"
         }, 
         object : "OpenXmlB64Templates", 
-        dest: "dist/OpenXmlBuilder.templates.js"
+        dest: "dist/OpenXmlB64Templates.js"
       }
     }, 
     concat: {

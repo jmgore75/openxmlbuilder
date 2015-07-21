@@ -9,6 +9,7 @@
 (function(window, undefined) {
   "use strict";
   var OpenXmlBuilder = {};
+  OpenXmlBuilder.version = "0.1.0";
   var ox = {};
   ox.xmlns = "http://www.w3.org/2000/xmlns/";
   ox.rel = "http://schemas.openxmlformats.org/package/2006/relationships";

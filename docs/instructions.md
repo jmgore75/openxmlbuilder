@@ -1,405 +1,118 @@
-# WARNING
-**This `ieCompatibility` branch contains a modified version of the v2.0.2 codebase for ZeroClipboard.  It is primarily intended to support IE in compatibility view, with additional features.  Please see [`ZeroClipboard`](https://github.com/zeroclipboard/zeroclipboard) for the original.**
-
-
 # Overview
 
-The ClipAndFile library provides an easy way to copy text to the clipboard or save a file using an invisible [Adobe Flash](http://en.wikipedia.org/wiki/Adobe_Flash) movie and a [JavaScript](http://en.wikipedia.org/wiki/JavaScript) interface. The the user interface is left entirely up to you. 
+The OpenXmlBuilder library allows you to build simple OpenXml documents right in the browser.  It is small and compatible with both modern browsers and Internet Explorer in compatibility view.   
 
-This is achieved by automatically floating the invisible movie on top of a [DOM](http://en.wikipedia.org/wiki/Document_Object_Model) element of your choice. Standard mouse events are even propagated out to your DOM element, so you can still have rollover and mousedown effects.
+## Dependencies
 
-
-## Limitations
-
-Note that, due to browser and Flash security restrictions, this clipboard injection can _**ONLY**_ occur when the user clicks on the invisible Flash movie. A simulated `click` event from JavaScript will not suffice as this would enable [clipboard poisoning](http://www.computerworld.com/s/article/9117268/Adobe_patches_Flash_clickjacking_and_clipboard_poisoning_bugs).
-
+OpenXmlBuilder requires the [JSZip](https://stuk.github.io/jszip/) library.  
 
 ## Setup
 
-To use the library, simply include the following JavaScript file in your page:
+To use the library, simply include the following JavaScript declarations in your page:
 
 ```html
-<script type="text/javascript" src="ClipAndFile.js"></script>
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
+<script type="text/javascript" src="OpenXmlBuilder.js"></script>
+<script type="text/javascript" src="OpenXmlB64Templates.js"></script>
 ```
 
-You also need to have the "`ClipAndFile.swf`" file available to the browser.  If this file is located in the same
-directory as your web page, then it will work out of the box.  However, if the SWF file is hosted elsewhere, you need
-to set the URL like this (place this code _after_ the script tag):
-
-```js
-ClipAndFile.config( { swfPath: 'http://YOURSERVER/path/ClipAndFile.swf' } );
-```
-
-
-## Clients
-
-Now you are ready to create one or more _clients_.  A client is a single instance of the clipboard library on the page,
-linked to one or more DOM elements. Here is how to create a client instance:
-
-```js
-var client = new ClipAndFile();
-```
-
-You can also include an element or array of elements in the new client. _\*\*This example uses jQuery to find "copy buttons"._
-
-```js
-var client = new ClipAndFile($(".copy-button"));
-```
-
+OpenXmlBuilder expects you to provide template documents in base64 encoded format.  
+Template documents are provided for you in OpenXmlB64Templates.js, but you may wish to generate your 
+own templates in base64 format, or even load templates dynamically.  
 
 ## API
 
-For the full API documentation, see [api/ClipAndFile.md](api/ClipAndFile.md). The full set of
-[Configuration Options](api/ClipAndFile.md#configuration-options) are also documented there.
+For the full API documentation, see [api/OpenXmlBuilder.md](api/OpenXmlBuilder.md). The full set of
+[Configuration Options](api/OpenXmlBuilder.md#configuration-options) are also documented there.
 
-For developers who want to wrap ClipAndFile into a 3rd party plugin
-(e.g. [JamesMGreene/jquery.clipandfile](https://github.com/JamesMGreene/jquery.clipandfile)),
-see the [api/ClipAndFile.Core.md](api/ClipAndFile.Core.md) documentation instead.
-
-
-### Text To Copy
-
-Setting the clipboard text can be done in 4 ways:
-
-1. Add a `copy` event handler in which you call `event.clipboardData.setData` to set the appropriate data. This event is triggered every time ClipAndFile tries to act. Example:
-
-   ```js
-   client.on( "copy", function (event) {
-      var clipboard = event.clipboardData;
-      clipboard.setData( "text/plain", "Copy me!" );
-      clipboard.setData( "text/html", "<b>Copy me!</b>" );
-      clipboard.setData( "application/rtf", "{\\rtf1\\ansi\n{\\b Copy me!}}" );
-   });
-   ```
-
-2. Set the "text/plain" [and _usually_ "text/html"] clipboard segments via `data-clipboard-target` attribute on the button. ClipAndFile will look for the target element via ID and try to get the HTML value via `.value`, `.outerHTML`, or `.innerHTML`, and the text value via `.value`, `.textContent`, or `.innerText`. If the HTML and text values for the targeted element match, the value will only be placed into the "text/plain" segment of the clipboard (i.e. the "text/html" segment will cleared).
-
-  ```html
-  <button id="my-button_text" data-clipboard-target="clipboard_text">Copy to Clipboard</button>
-  <button id="my-button_textarea" data-clipboard-target="clipboard_textarea">Copy to Clipboard</button>
-  <button id="my-button_pre" data-clipboard-target="clipboard_pre">Copy to Clipboard</button>
-
-  <input type="text" id="clipboard_text" value="Clipboard Text"/>
-  <textarea id="clipboard_textarea">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-  tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-  quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-  consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-  cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-  proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</textarea>
-  <pre id="clipboard_pre">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-  tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-  quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-  consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-  cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-  proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</pre>
-  ```
-
-3. Set the "text/plain" clipboard segment via `data-clipboard-text` attribute on the button. Doing this will let ClipAndFile take care of the rest.
-
-  ```html
-  <button id="my-button" data-clipboard-text="Copy me!">Copy to Clipboard</button>
-  ```
-
-4. Set the data via the `ClipAndFile.setData` (any segment) method.  You can call this function at any time: when the page first loads, or later like in a `copy` event handler.  Example:
+### Creating a PowerPoint document
 
   ```js
-  ClipAndFile.setData( "text/plain", "Copy me!" );
+    function pptReport(title, sections) {
+        var created = new Date(); 
+        var creator = "OXB"; 
+
+        var pb = new OpenXmlBuilder.PPTXBuilder(OpenXmlB64Templates.pptx, title, created, creator); 
+        pb.contentSlide({"Title 1":"<span style='color:red'>DELETE THIS SLIDE</span>", "Subtitle 2" : "Delete this slide to ensure that text content is scaled to fit within the presentation." }, 1); 
+        pb.contentSlide({"Title 1":title, "Subtitle 2" : "Created " + created.toString() }, 1); 
+        var i, section; 
+        for (i = 0; i < sections.length; i++) {
+            section = sections[i]; 
+            if (section.summary) {
+                pb.contentSlide({"Title 1":"<a href='" + section.url + "'>"+section.title+"</a>", "Content Placeholder 2" : section.summary}); 
+            }
+        }
+        return pb.saveToBlob(); 
+    }
   ```
 
-  The important caveat of using `ClipAndFile.setData` is that the data it sets is **transient** and _will only be used for a single copy operation_. As such, we do not particularly
-  recommend using `ClipAndFile.setData` (and friends) other than inside of a `copy` event handler; however, the API will not prevent you from using it in other ways.
-
-5. Set the data via the `client.setText` ("text/plain" segment), `client.setHtml` ("text/html" segment), `client.setRichText` ("application/rtf" segment), or `client.setData` (any segment) methods.  You can call this function at any time: when the page first loads, or later like in a `copy` event handler.  Example:
+### Creating a Word document
 
   ```js
-  client.setText( "Copy me!" );
+    function docReport(title, sections) {
+        var created = new Date(); 
+        var creator = "OXB"; 
+
+        var db = new OpenXmlBuilder.DOCXBuilder(OpenXmlB64Templates.docx, title, created, creator); 
+        var heading = db.pStyle("Heading1"); 
+        db.docLine(title, db.pStyle("Title")); 
+        db.docLine("Created " + created.toString(), db.pStyle("Subtitle")); 
+        
+        var i, section; 
+        for (i = 0; i < sections.length; i++) {
+            section = sections[i]; 
+            if (section.summary) {
+                db.docLine("<a href='" + section.url + "'>"+section.title+"</a>", heading); 
+                db.docChunk(section.summary); 
+            }
+        }
+        return db.saveToBlob(); 
+    }
   ```
 
-  The important caveat of using `client.setData` (and friends) is that the data it sets is **transient** and _will only be used for a single copy operation_. As such, we do not particularly
-  recommend using `client.setData` (and friends) other than inside of a `copy` event handler; however, the API will not prevent you from using it in other ways.
+
+### Creating an Excel document
+
+This is not yet supported.  
 
 
-### Saving to file
+### Saving the results
 
-Saving a file can be done in 4 ways:
+Internally you are building a zip file, which may then be used to generate base64 or a blob.  
 
-1. Add a `copy` event handler in which you call `event.clipboardData.setFile` to set the appropriate data for file save. This event is triggered every time ClipAndFile tries to act. Example:
+You must first save changes, then generate the data to save.  However, there is no standard 
+method for saving files from the browser, so you must choose from one of several options.  
 
-   ```js
-   client.on( "copy", function (event) {
-      var clipboard = event.clipboardData;
-      clipboard.setFile( "text/plain", "Save me!", "example.txt", false);
-   });
-   ```
+#### Using saveAs via [FileSaver.js](https://github.com/eligrey/FileSaver.js)
 
-2. Set the "text/plain" file data via `data-clipboard-target` attribute on the button, along with the `data-clipboard-file` attribute. ClipAndFile will look for the target element via ID and try to get the text value via `.value`, `.textContent`, or `.innerText`, then save to a file of the specified name. 
-
-  ```html
-  <button id="my-button_text" data-clipboard-target="clipboard_text" data-clipboard-file="text.txt">Copy to Clipboard</button>
-  <button id="my-button_textarea" data-clipboard-target="clipboard_textarea" data-clipboard-file="textarea.txt">Copy to Clipboard</button>
-  <button id="my-button_pre" data-clipboard-target="clipboard_pre" data-clipboard-file="pre.txt">Copy to Clipboard</button>
-
-  <input type="text" id="clipboard_text" value="Clipboard Text"/>
-  <textarea id="clipboard_textarea">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-  tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-  quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-  consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-  cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-  proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</textarea>
-  <pre id="clipboard_pre">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-  tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-  quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-  consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-  cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-  proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</pre>
-  ```
-
-3. Set the file data via `data-clipboard-b64` or `data-clipboard-text` attributes on the button, along with the `data-clipboard-file` attribute. ClipAndFile will save the data to the specified file.
-
-  ```html
-  <button id="my-button" data-clipboard-text="Copy me!" data-clipboard-file="example.txt">Copy to Clipboard</button>
-  ```
-
-4. Set the data via the `ClipAndFile.setFile` (any segment) method.  You can call this function at any time: when the page first loads, or later like in a `copy` event handler.  Example:
+This is the preferred method of saving files in modern browsers, which exploits a variety of methods depending on the browser.  
 
   ```js
-  ClipAndFile.setFile( "text/plain", "Save me!", "example.txt", false);
+    saveAs(pb.saveToBlob(), "example.ppt"); 
   ```
 
-  The important caveat of using `ClipAndFile.setData` is that the data it sets is **transient** and _will only be used for a single save operation_. As such, we do not particularly
-  recommend using `ClipAndFile.setFile` (and friends) other than inside of a `copy` event handler; however, the API will not prevent you from using it in other ways.
+#### Generating a dataURI (not recommended)
 
+An even simpler approach but one which is poorly supported is the use of data URIs.  
+Data uris are not generally supported in IE, and should generally be avoided. 
 
-### Clipping
+A data uri may be used to generate a hyperlink that saves the document: 
 
-Clipping refers to the process of "linking" the Flash movie to a DOM element on the page. Since the Flash movie is completely transparent, the user sees nothing out of the ordinary.
+  ```js
+    var a= document.createElement("A"); 
+    a.href = pb.saveToDataURI(); 
+    a.download = "example.ppt"; 
+    a.innerHTML = "Download File"; 
+    document.body.append(a); 
+  ```
 
-The Flash movie receives the click event and copies the text to the clipboard.  Also, mouse actions like hovering and `mousedown` generate events that you can capture (see [_Event Handlers_](#event-handlers) below).
+Alternatively you may tell the browser to download the file (but will not be able to specify a filename): 
 
-To clip elements, you must pass an element, or array of elements to the `clip` function.
+  ```js
+    document.location.href = pb.saveToDataURI(); 
+  ```
+#### Using a Flash-based solution
 
-Here is how to clip your client library instance to a DOM element:
+For legacy browsers your only option may be to use a flash-based solution such as [ClipAndSave](https://github.com/jmgore75/clipandsave).
 
-```js
-client.clip( document.getElementById("d_clip_button") );
-```
 
-You can pass in a reference to the actual DOM element object itself or an array of DOM objects.  The rest all happens automatically: the movie is created, all your options set, and it is floated above the element, awaiting clicks from the user.
-
-
-### Example Implementation
-
-```html
-<button id="my-button" data-clipboard-text="Copy me!" title="Click to copy to clipboard.">Copy to Clipboard</button>
-```
-
-And the code:
-
-```js
-var client = new ClipAndFile( $("button#my-button") );
-```
-
-
-## CSS Effects
-
-Since the Flash movie is floating on top of your DOM element, it will receive all the mouse events before the browser has a chance to catch them.  However, for convenience, these events are passed through to your clipboard client which you can capture (see _Event Handlers_ below), so long as the `bubbleEvents` configuration property remains set to `true`.
-
-In addition to this, ClipAndFile can also manage CSS classes on the clipped elements that mimic the CSS pseudo-classes ":hover" and ":active" on your DOM element.  This essentially allows your elements to behave normally, even though the floating Flash movie is the first object receiving all the mouse events during the event bubbling phase.  These "pseudo-pseudo-class" names are configurable via the `hoverClass` and `activeClass` configuration properties.
-
-Example CSS, targeting a DOM element with a class of "clip_button":
-
-```css
-  .clip_button {
-    width: 150px;
-    text-align: center;
-    border: 1px solid black;
-    background-color: #ccc;
-    margin: 10px;
-    padding: 10px;
-  }
-  .clip_button.clipandfile-is-hover { background-color: #eee; }
-  .clip_button.clipandfile-is-active { background-color: #aaa; }
-```
-
-
-## Examples
-
-The following are complete, working examples of using the clipboard client library in HTML pages.
-
-
-### Minimal Example
-
-Here is a quick example using as few calls as possible:
-
-```html
-<html>
-  <body>
-    <div id="d_clip_button" class="clip_button" data-clipboard-text="Copy Me!" title="Click to copy." style="border:1px solid black; padding:20px;">Copy To Clipboard</div>
-
-    <script type="text/javascript" src="ClipAndFile.js"></script>
-    <script type="text/javascript">
-      var client = new ClipAndFile( document.getElementById('d_clip_button') );
-    </script>
-  </body>
-</html>
-```
-
-When clicked, the text "Copy me!" will be copied to the clipboard.
-
-
-### A More Complete Example
-
-Here is a more complete example which exercises many of the configuration options and event handlers:
-
-```html
-<html>
-  <head>
-    <style type="text/css">
-      .clip_button {
-        text-align: center;
-        border: 1px solid black;
-        background-color: #ccc;
-        margin: 10px;
-        padding: 10px;
-      }
-      .clip_button.clipandfile-is-hover { background-color: #eee; }
-      .clip_button.clipandfile-is-active { background-color: #aaa; }
-    </style>
-  </head>
-  <body>
-    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-    <script type="text/javascript" src="ClipAndFile.js"></script>
-
-    <div class="clip_button">Copy To Clipboard</div>
-    <div class="clip_button">Copy This Too!</div>
-
-    <script type="text/javascript">
-      var client = new ClipAndFile( $('.clip_button') );
-
-      client.on( 'ready', function(event) {
-        // console.log( 'movie is loaded' );
-
-        client.on( 'copy', function(event) {
-          event.clipboardData.setData('text/plain', event.target.innerHTML);
-        } );
-
-        client.on( 'aftercopy', function(event) {
-          console.log('Copied text to clipboard: ' + event.data['text/plain']);
-        } );
-      } );
-
-      client.on( 'error', function(event) {
-        // console.log( 'ClipAndFile error of type "' + event.name + '": ' + event.message );
-        ClipAndFile.destroy();
-      } );
-    </script>
-  </body>
-</html>
-```
-
-
-## Namespacing ClipAndFile
-
-ClipAndFile creates DOM elements with pre-configured attributes, e.g. a `div` element with an ID of `"global-clipandfile-html-bridge"` to encapsulate the Flash object.
-
-If you have a need to change the default values, they can be configured by passing in values for `containerId`, `containerClass`, and/or `swfObjectId` using the `ClipAndFile.config` method. Configuration of these values is completely optional. These values cannot be reconfigured while the ClipAndFile SWF is actively embedded, and so are completely ignored during that time.
-
-Values for `containerId` and `swfObjectId` are validated against the [HTML4 spec for `ID` and `Name` tokens][valid_ids].
-
-  
-## AMD
-
-If using [AMD](https://github.com/amdjs/amdjs-api/wiki/AMD) with a library such as [RequireJS](http://requirejs.org/), etc., you shouldn't need to do any special configuration for ClipAndFile to work correctly as an AMD module.
-
-
-## CommonJS
-
-If using [CommonJS](http://wiki.commonjs.org/wiki/Modules/1.1) with a library such as [Browserify](http://browserify.org/), [Webmake](https://github.com/medikoo/modules-webmake), etc., you shouldn't need to do any special configuration for ClipAndFile to work correctly as an CommonJS module.
-
-
-## Known Conflicts With Other Libraries
-
-### [IE freezes when clicking a ClipAndFile clipped element within a Bootstrap Modal](https://github.com/clipandfile/clipandfile/issues/159).
- - **Cause:** Bootstrap's Modal has an `enforceFocus` function that tries to keep the focus on the modal.
-   However, since the ClipAndFile container is an immediate child of the `body`, this enforcement conflicts. Note that
-   this workaround actually _overrides_ a core Bootstrap Modal function, and as such must be kept in sync as this function
-   changes in future versions of Bootstrap.
- - **Workaround:** _Targeted against [Bootstrap v3.x](https://github.com/twbs/bootstrap/blob/96a9e1bae06cb21f8cf72ec528b8e31b6ab27272/js/modal.js#L115-123)._
-
-```js
-if (/MSIE|Trident/.test(window.navigator.userAgent)) {
-  (function($) {
-    var zcClass = ClipAndFile.config('containerClass');
-    var proto = $.fn.modal.Constructor.prototype;
-    proto.enforceFocus = function() {
-      $(document)
-        .off('focusin.bs.modal')  /* Guard against infinite focus loop */
-        .on('focusin.bs.modal', $.proxy(function(e) {
-          if (this.$element[0] !== e.target &&
-             !this.$element.has(e.target).length &&
-             /* Adding this final condition check is the only real change */
-             !$(e.target).closest(zcClass).length
-          ) {
-            this.$element.focus();
-          }
-        }, this));
-    };
-  })(window.jQuery);
-}
-```
-
-
-### [IE freezes when clicking a ClipAndFile clipped element within a jQuery UI [Modal] Dialog](https://github.com/clipandfile/clipandfile/issues/159).
- - **Cause:** jQuery UI's Dialog (with `{ modal: true }` set) has a `_keepFocus` function that tries to keep the focus on the modal.
-   However, since the ClipAndFile container is an immediate child of the `body`, this enforcement conflicts. Luckily, jQuery UI offers
-   more natural extension points than Bootstrap, so the workaround is smaller and less likely to be broken in future versions.
- - **Workaround:** _Targeted against [jQuery UI v1.10.x](https://github.com/jquery/jquery-ui/blob/457b275880b63b05b16b7c9ee6c22f29f682ebc8/ui/jquery.ui.dialog.js#L695-703)._
-
-```js
-if (/MSIE|Trident/.test(window.navigator.userAgent)) {
-  (function($) {
-    var zcClass = ClipAndFile.config('containerClass');
-    $.widget( 'ui.dialog', $.ui.dialog, {
-      _allowInteraction: function( event ) {
-        return this._super(event) || $( event.target ).closest( zcClass ).length;
-      }
-    } );
-  })(window.jQuery);
-}
-```
-
-
-## Browser Support
-
-This library is fully compatible with Flash Player 11.0.0 and above, which requires that the clipboard copy operation be initiated by a user click event inside the Flash movie. This is achieved by automatically floating the invisible movie on top of a [DOM](http://en.wikipedia.org/wiki/Document_Object_Model) element of your choice. Standard mouse events are even propagated out to your DOM element, so you can still have rollover and mousedown effects.
-
-Definitely works in IE8+ and all of the evergreen browsers.
-Should also work in IE7 if you provide a polyfill for the global `JSON` object, e.g.
-[JSON 2](https://github.com/douglascrockford/JSON-js/blob/master/json2.js) or
-[JSON 3](http://bestiejs.github.io/json3/).
-
-
-## OS Considerations
-
-Because ClipAndFile will be interacting with your users' system clipboards, there are some special considerations
-specific to the users' operating systems that you should be aware of. With this information, you can make informed
-decisions of how _your_ site should handle each of these situations.
-
- - **Windows:**
-     - If you want to ensure that your Windows users will be able to paste their copied text into Windows
-       Notepad and have it honor line breaks, you'll need to ensure that the text uses the sequence `\r\n` instead of
-       just `\n` for line breaks.  If the text to copy is based on user input (e.g. a `textarea`), then you can achieve
-       this transformation by utilizing the `copy` event handler, e.g.  
-
-      ```js
-      client.on('copy', function(event) {
-          var text = document.getElementById('yourTextArea').value;
-          var windowsText = text.replace(/\n/g, '\r\n');
-          event.clipboardData.setData('text/plain', windowsText);
-      });
-      ```
-
-
-
-
-[valid_ids]: http://www.w3.org/TR/html4/types.html#type-id "HTML4 specification for `ID` and `Name` tokens"
