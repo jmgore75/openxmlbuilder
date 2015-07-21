@@ -1,5 +1,6 @@
 //Content specific to PowerPoint generation
 
+relTypes.slideMaster = relTypePrefix + "slideMaster"; 
 relTypes.slideLayout = relTypePrefix + "slideLayout"; 
 relTypes.slide = relTypePrefix + "slide"; 
 contTypes.slide = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml"; 
@@ -61,6 +62,24 @@ PPTXBuilder.prototype = {
         sld.removeAttr("type"); 
         sld.one("p:cSld").removeAttr("name"); 
         
+        //Remove unused placeholders
+        var rel = slideLayout.getRelationshipsByRelationshipType(relTypes.slideMaster)[0]; 
+        var slideMaster = this.getPart(this.fullPath(rel.getAttr("Target"), slideLayout.path)); 
+        var hf = slideMaster.one("//p:hf"); 
+        if (hf) {
+            var shapes = slide.all("//p:sp"); 
+            var ph, phType; 
+            for (var i = 0; i < shapes.length; i++) {
+                ph = shapes[i].one("./p:nvSpPr/p:nvPr/p:ph"); 
+                if (ph) {
+                    phType = ph.getAttr("type"); 
+                    if (phType && hf.getAttr(phType) === "0") {
+                        shapes[i].remove(); 
+                    }
+                }
+            }
+        }
+
         var rId = this.presentation.nextRelationshipId(); 
         this.presentation.addRelationship(rId, relTypes.slide , slideUri, "Internal"); 
         
@@ -83,9 +102,7 @@ PPTXBuilder.prototype = {
             var html = content[spId]; 
             if (html) {
                 this.pptContent(slide, shapes[i], html);
-            } else {
-                shapes[i].remove(); 
-            }
+            } 
         }
     }, 
     /*jshint -W071 */
