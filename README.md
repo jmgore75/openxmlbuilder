@@ -17,9 +17,9 @@ OpenXmlBuilder requires the [JSZip](https://stuk.github.io/jszip/) library.
 // pptx.js
   var pb = new OpenXmlBuild.PPTBuilder(OpenXmlB64Templates.pptx, title, created, creator); 
   pb.contentSlide({"Title 1":"Delete this slide", 
-    "Subtitle 2" : "Delete this slide to ensure that contents are scaled to fit within the slides." }, "Title Slide"); 
-  pb.contentSlide({"Title 1":title, "Subtitle 2" : "Created " + created.toString() }, "Title Slide"); 
-  pb.contentSlide({"Title 1":"A question", "Content Placeholder 2" : sampleHtml}, "Title and Content"); 
+    "Subtitle 2" : "Delete this slide to ensure that contents are scaled to fit within the slides." }, 1); 
+  pb.contentSlide({"Title 1":title, "Subtitle 2" : "Created " + created.toString() }, 1); 
+  pb.contentSlide({"Title 1":"A question", "Content Placeholder 2" : sampleHtml}, 2); 
   return pb.saveToBase64(); 
 
 // doc.js
