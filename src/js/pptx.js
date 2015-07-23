@@ -101,7 +101,12 @@ PPTXBuilder.prototype = {
             var spId = shapes[i].one("./p:nvSpPr/p:cNvPr").getAttr("name"); 
             var html = content[spId]; 
             if (html) {
-                this.pptContent(slide, shapes[i], html);
+                var blocks = convertHtml(html); 
+                if (blocks.length === 1 && blocks[0].type === "table") {
+                    this.pptTable(slide, shapes[i], blocks[0]);
+                } else {
+                    this.pptContent(slide, shapes[i], blocks);
+                }
             } 
         }
     }, 
@@ -297,30 +302,27 @@ PPTXBuilder.prototype = {
         
         parent.add(tbl); 
     }, 
-    pptContent : function (slide, shape, html) {
+    pptContent : function (slide, shape, blocks) {
         var txBody = shape.one("./p:txBody"); 
         var ps = txBody.all("./a:p"); 
         for (var j = 0; j < ps.length; j++) {
             ps[j].remove(); 
         }
-        var blocks = convertHtml(html); 
         this._blocks(slide, txBody, blocks); 
     }, 
-    pptLine : function (slide, shape, html) {
+    pptLine : function (slide, shape, block) {
         var txBody = shape.one("./p:txBody"); 
         var ps = txBody.all("./a:p"); 
         for (var j = 0; j < ps.length; j++) {
             ps[j].remove(); 
         }
-        var blocks = convertHtml(html); 
-        if (blocks.length === 1 && blocks[0].type === "paragraph") {
-            var block = blocks[0]; 
+        if (block.type === "paragraph") {
             this._paragraph(slide, txBody, block); 
         } else {
-            throw "Content is not a single paragraph"; 
+            throw "Block is not a paragraph"; 
         } 
     }, 
-    pptTable : function (slide, shape, html) {
+    pptTable : function (slide, shape, block) {
         var graphicFrame = slide.el("p:graphicFrame"); 
         var a, b, c, i; 
         a = slide.el("p:nvGraphicFramePr"); 
@@ -352,12 +354,10 @@ PPTXBuilder.prototype = {
 
         shape.replace(graphicFrame); 
 
-        var blocks = convertHtml(html); 
-        if (blocks.length === 1 && blocks[0].type === "table") {
-            var block = blocks[0]; 
+        if (block.type === "table") {
             this._table(slide, b, block); 
         } else {
-            throw "Content is not a table"; 
+            throw "Block is not a table"; 
         } 
     }
 };

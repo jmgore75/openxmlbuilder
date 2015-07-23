@@ -221,12 +221,9 @@ module.exports = function(grunt) {
   grunt.registerTask("jshint-prebuild", ["jshint:Gruntfile", "jshint:js", "jshint:test"]);
   grunt.registerTask("validate",        ["jshint-prebuild"]);
   grunt.registerTask("build",           ["clean", "b64js", "concat", "jshint:dist", "uglify", "template", "chmod"]);
-  grunt.registerTask("build-travis",    ["clean:dist", "b64js", "concat", "jshint:dist", "chmod:dist"]);
   grunt.registerTask("test",            ["connect", "qunit"]);
 
   // Default task
   grunt.registerTask("default", ["validate", "build", "test"]);
-  // Travis CI task
-  grunt.registerTask("travis",  ["validate", "build-travis", "test"]);
 
 };
