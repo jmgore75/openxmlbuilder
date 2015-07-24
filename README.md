@@ -2,6 +2,12 @@
 
 The OpenXmlBuilder library allows you to build simple OpenXml documents right in the browser.  It is small and compatible with both modern browsers and Internet Explorer in compatibility view.  Currently it supports PowerPoint and Word documents.  
 
+## References
+
+OpenXmlBuilder is inspired by the [Open XML SDK for JavaScript](https://openxmlsdkjs.codeplex.com/) project, but is smaller, more focused, and compatible with IE Compatibility view.  The SDK is much more complete, and is useful for determining correct values for relationship and element types.  
+
+Additionally, the Open XML documentation at [OOXML](http://officeopenxml.com/) has proved useful for understanding the structure of Open XML documents.  
+
 ## Dependencies
 
 OpenXmlBuilder requires the [JSZip](https://stuk.github.io/jszip/) library.  
