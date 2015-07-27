@@ -4,8 +4,27 @@
 var os = require("os");
 var path = require("path");
 
+function extend(tgt, src) {
+  var v;
+  tgt = tgt || {};
+  for (v in src) {
+    if (src.hasOwnProperty(v) && !tgt.hasOwnProperty(v)) {
+      tgt[v] = src[v];
+    }
+  }
+  return tgt;
+}
+
 module.exports = function(grunt) {
   "use strict";
+
+  var b64 = function(filepath) {
+    var output = grunt.file.read(filepath, {
+      encoding: null
+    }).toString("base64");
+    grunt.log.writeln("Base64 encoded \"" + filepath + "\".");
+    return output;
+  };
 
   // Metadata
   var pkg = grunt.file.readJSON("package.json");
@@ -29,16 +48,6 @@ module.exports = function(grunt) {
       dist: ["OpenXmlBuilder.*", "dist/OpenXmlBuilder.*"],
       meta: ["bower.json", "composer.json", "LICENSE"]
     },
-    b64js: {
-      client: {
-        properties: {
-          "docx": "src/templates/template.docx", 
-          "pptx": "src/templates/template.pptx"
-        }, 
-        object : "OpenXmlB64Templates", 
-        dest: "dist/OpenXmlB64Templates.js"
-      }
-    }, 
     concat: {
       options: {
         stripBanners: false,
@@ -57,6 +66,23 @@ module.exports = function(grunt) {
           "src/js/end.js"
         ],
         dest: "dist/OpenXmlBuilder.js"
+      },
+      b64Templates : {
+        options : {
+          process : {
+            data : extend({
+              object : "OpenXmlB64Templates",
+              b64 : b64,
+              templates : [
+                {name:"pptx", src:"src/templates/template.pptx"},
+                {name:"docx", src:"src/templates/template.docx"}
+              ]
+            }, pkg)
+          }
+        },
+        files: {
+          "dist/OpenXmlB64Templates.js" : ["src/meta/source-banner.tmpl", "src/meta/b64Lib.tmpl"]
+        }
       }
     },
     uglify: {
@@ -196,31 +222,10 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks("grunt-contrib-qunit");
   grunt.loadNpmTasks("grunt-contrib-watch");
 
-  // Building b64 template
-  grunt.registerMultiTask("b64js", "B64 files into javascript strings", function () {
-    var options = this.options({});
-    var v, b64, filepath; 
-
-    var output = "var " + this.data.object + " = {};\n"; 
-    // Iterate over all specified file groups.
-    for (var v in this.data.properties) {
-      filepath = this.data.properties[v]; 
-      b64 = grunt.file.read(filepath, {
-          encoding: null
-        }).toString('base64');
-      output += this.data.object + '.' + v + '="'; 
-      output += b64; 
-      output += '";\n'; 
-      grunt.log.writeln('Base64 encoded "' + filepath + '".');
-    }
-    grunt.file.write(this.data.dest, output);
-    grunt.log.writeln('Built ' + this.data.dest);
-  }); 
-
   // Task aliases and chains
   grunt.registerTask("jshint-prebuild", ["jshint:Gruntfile", "jshint:js", "jshint:test"]);
   grunt.registerTask("validate",        ["jshint-prebuild"]);
-  grunt.registerTask("build",           ["clean", "b64js", "concat", "jshint:dist", "uglify", "template", "chmod"]);
+  grunt.registerTask("build",           ["clean", "concat", "jshint:dist", "uglify", "template", "chmod"]);
   grunt.registerTask("test",            ["connect", "qunit"]);
 
   // Default task

@@ -1,0 +1,20 @@
+(function(window, undefined) {
+  "use strict";
+  var <%= object %> = {};
+  <%= object %>.version = "<%= version %>";
+
+<% _.forEach( templates, function(tmpl) { %>  <%= object %>.<%= tmpl.name %> = "<%= b64(tmpl.src) %>";
+<% }); %>
+  if (typeof define === "function" && define.amd) {
+    define(function() {
+      return <%= object %>;
+    });
+  } else if (typeof module === "object" && module && typeof module.exports === "object" && module.exports) {
+    module.exports = <%= object %>;
+  } else {
+    window.<%= object %> = <%= object %>;
+  }
+})((function() {
+  "use strict";
+  return this;
+}()));
