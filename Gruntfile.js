@@ -5,7 +5,7 @@ var os = require("os");
 var path = require("path");
 
 module.exports = function(grunt) {
-  "use strict";
+  "use strict"; 
 
   // Metadata
   var pkg = grunt.file.readJSON("package.json");
