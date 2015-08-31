@@ -783,14 +783,14 @@
     },
     _findLayouts: function() {
       var slideLayouts = {};
-      var slideLayoutObjects = this.zip.folder("/ppt/slideLayouts").file(/^slideLayout\d+\.xml$/);
+      var slideLayoutObjects = this.zip.folder("ppt/slideLayouts").file(/^slideLayout\d+\.xml$/);
       for (var j = 0; j < slideLayoutObjects.length; j++) {
         var slo = slideLayoutObjects[j];
         var slideLayoutId = parseInt(slo.name.slice(11, -4), 10);
         var fullUri = "/ppt/slideLayouts/" + slo.name;
         var relUri = "../slideLayouts/" + slo.name;
         var slideLayout = new XDoc(slo.asText());
-        var masterPath = new XDoc(this.zip.file("/ppt/slideLayouts/_rels/" + slo.name + ".rels").asText()).one("/rel:Relationships/rel:Relationship[@Type='" + relTypes.slideMaster + "']").getAttr("Target");
+        var masterPath = new XDoc(this.zip.file("ppt/slideLayouts/_rels/" + slo.name + ".rels").asText()).one("/rel:Relationships/rel:Relationship[@Type='" + relTypes.slideMaster + "']").getAttr("Target");
         var slideMaster = this.getPart(this.fullPath(masterPath, slideLayout.path));
         var layoutSections = [];
         var sld = slideLayout.root();
