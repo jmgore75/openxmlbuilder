@@ -1,9 +1,9 @@
 var getStyle = window.getComputedStyle || function (e) {
-    return e.currentStyle; 
-}; 
+    return e.currentStyle;
+};
 
 function leftPad (s, len, c) {
-    c= c || " "; 
+    c= c || " ";
     len= len || 2;
     while(s.length < len) {
         s= c + s;
@@ -16,7 +16,7 @@ var colornames = {
     GRAY: "808080", GREEN: "008000", LIME: "00FF00", MAROON: "800000",
     NAVY: "000080", OLIVE: "808000", PURPLE: "800080", RED: "FF0000",
     SILVER: "C0C0C0", TEAL: "008080", WHITE: "FFFFFF", YELLOW: "FFFF00"
-}; 
+};
 function convertColor(c) {
     var tem, i= 0;
     c= c? c.toString().toUpperCase(): "";
@@ -25,7 +25,7 @@ function convertColor(c) {
             var A= c.split("");
             c= A[1]+A[1]+A[2]+A[2]+A[3]+A[3];
         } else {
-            c= c.substr(1, 8); 
+            c= c.substr(1, 8);
         }
         return c;
     }
@@ -52,153 +52,159 @@ function convertColor(c) {
         }
     }
     if( c.length === 4 && c[3] === "00") {
-        return ""; 
+        return "";
     }
     return c.slice(0, 3).join("");
 }
 
 function convertStyle(s) {
-    var a = {}; 
+    var a = {};
     if (s.verticalAlign === "super") {
-        a.sup = 1; 
+        a.sup = 1;
     }
     if (s.verticalAlign === "sub") {
-        a.sub = 1; 
+        a.sub = 1;
     }
-    var i = parseInt(s.fontWeight, 10); 
+    var i = parseInt(s.fontWeight, 10);
     if (isNaN(i)) {
         if (s.fontWeight === "bold") {
-            a.b = 1; 
+            a.b = 1;
         }
     } else {
         if ( i >= 700) {
-            a.b = 1; 
+            a.b = 1;
         }
     }
     if (s.fontStyle === "italic") {
-        a.i = 1; 
+        a.i = 1;
     }
     if (s.textDecoration === "underline") {
-        a.u = 1; 
+        a.u = 1;
     }
-    var color = convertColor(s.color); 
+    var color = convertColor(s.color);
     if (color && color !== "000000") {
-        a.color = color; 
+        a.color = color;
     }
-    color = convertColor(s.backgroundColor); 
+    color = convertColor(s.backgroundColor);
     if (color && color !== "FFFFFF") {
-        a.bgColor = color; 
+        a.bgColor = color;
     }
-    return a; 
+    return a;
 }
 
 function Blocker () {
-    this.blocks = []; 
-    this.block = null; 
+    this.blocks = [];
+    this.block = null;
 }
 Blocker.prototype = {
     addRun : function (style, text) {
-        var run = {}; 
+        var run = {};
         for (var attr in style) {
             if (style.hasOwnProperty(attr)) {
                 run[attr] = style[attr];
             }
         }
-        run.text = text; 
-        var block = this.currentBlock(); 
-        block.runs.push(run); 
-        return run; 
-    }, 
+        run.text = text;
+        var block = this.currentBlock();
+        block.runs.push(run);
+        return run;
+    },
     currentBlock : function () {
         if (!this.block) {
-            this.block = {type:"paragraph", runs:[]}; 
+            this.block = {type:"paragraph", runs:[]};
         }
-        return this.block; 
-    }, 
+        return this.block;
+    },
     breakBlock : function (force) {
         if (this.block || force) {
-            var block = this.currentBlock(); 
-            this.blocks.push(block); 
-            this.block = null; 
-            return block; 
+            var block = this.currentBlock();
+            this.blocks.push(block);
+            this.block = null;
+            return block;
         } else if (this.blocks.length) {
-            return this.blocks[this.blocks.length - 1]; 
+            return this.blocks[this.blocks.length - 1];
         }
-    }, 
+    },
     getBlocks : function () {
-        this.breakBlock(); 
-        return this.blocks; 
+        this.breakBlock();
+        return this.blocks;
     }, /*jshint -W071 */
     procNode: function (style, child) {
-        var sblocker; 
+        var sblocker;
         if (child.nodeType === 3) {
-            this.addRun(style, child.nodeValue); 
+            this.addRun(style, child.nodeValue);
         } else if (child.nodeType === 1) {
-            var cssStyle = getStyle(child); 
+            var cssStyle = getStyle(child);
             if (cssStyle.display === "none") {
-                return; 
+                return;
             }
-            var isBlock = cssStyle.display === "block"; 
-            var cstyle = convertStyle(cssStyle); 
-            
+            var isBlock = cssStyle.display === "block";
+            var cstyle = convertStyle(cssStyle);
+
             if (isBlock) {
-                this.breakBlock(); 
+                this.breakBlock();
             }
-            
+
             if (child.tagName === "LI") {
-                this.breakBlock(); 
-                this.currentBlock().type = "list-item"; 
-                this.procNodes(cstyle, child.childNodes); 
+                this.breakBlock();
+                this.currentBlock().type = "list-item";
+                this.procNodes(cstyle, child.childNodes);
             } else if (child.tagName === "OL" || child.tagName === "UL") {
-                this.breakBlock(); 
-                sblocker = new Blocker(); 
-                sblocker.procNodes(cstyle, child.childNodes); 
-                this.blocks.push({type:"list", listType:child.tagName.toLowerCase(), blocks:sblocker.getBlocks()}); 
+                this.breakBlock();
+                sblocker = new Blocker();
+                sblocker.procNodes(cstyle, child.childNodes);
+                this.blocks.push({type:"list", listType:child.tagName.toLowerCase(), blocks:sblocker.getBlocks()});
             } else if (child.tagName === "TABLE") {
-                sblocker = new Blocker(); 
-                sblocker.procNodes(cstyle, child.childNodes); 
-                this.blocks.push({type:"table", blocks:sblocker.blocks}); 
+                sblocker = new Blocker();
+                sblocker.procNodes(cstyle, child.childNodes);
+                this.blocks.push({type:"table", blocks:sblocker.blocks});
             } else if (child.tagName === "TR") {
-                sblocker = new Blocker(); 
-                sblocker.procNodes(cstyle, child.childNodes); 
-                this.blocks.push({type:"table-row", blocks:sblocker.blocks}); 
+                sblocker = new Blocker();
+                sblocker.procNodes(cstyle, child.childNodes);
+                this.blocks.push({type:"table-row", blocks:sblocker.blocks});
             } else if (child.tagName === "TD" || child.tagName === "TH") {
-                sblocker = new Blocker(); 
-                sblocker.procNodes(cstyle, child.childNodes); 
-                this.blocks.push({type:"table-cell", blocks:sblocker.getBlocks()}); 
+                sblocker = new Blocker();
+                sblocker.procNodes(cstyle, child.childNodes);
+                this.blocks.push({type:"table-cell", blocks:sblocker.getBlocks()});
             } else if (child.tagName === "A") {
-                cstyle.link = child.href; 
-                this.procNodes(cstyle, child.childNodes); 
+                cstyle.link = child.href;
+                this.procNodes(cstyle, child.childNodes);
             } else if (child.tagName === "HR") {
-                this.currentBlock().hr = true; 
-                this.breakBlock(); 
+                this.currentBlock().hr = true;
+                this.breakBlock();
             } else if (child.tagName === "BR") {
-                this.breakBlock(); 
+                this.breakBlock();
             } else if (child.tagName === "IMG") {
-                var run = this.addRun(cstyle, "[" + (child.alt || child.title || "IMAGE") + "]"); 
-                run.link = child.src; 
+                var run = this.addRun(cstyle, "[" + (child.alt || child.title || "IMAGE") + "]");
+                run.link = child.src;
             } else {
-                this.procNodes(cstyle, child.childNodes); 
+                this.procNodes(cstyle, child.childNodes);
             }
         }
     }, /*jshint +W071 */
     procNodes: function (style, children) {
         for (var i = 0; i < children.length; i++) {
-            this.procNode(style, children[i]); 
+            this.procNode(style, children[i]);
         }
     }
-}; 
+};
 
-function convertHtml (html) {
-    var d = document.createElement("DIV"); 
-    var p = document.head || document.body; 
-    p.appendChild(d); 
-    d.innerHTML = html; 
-    var mblocker = new Blocker(); 
-    mblocker.procNodes({}, d.childNodes); 
-    p.removeChild(d); 
-    d = null; 
-    return mblocker.getBlocks(); 
+function cleanupHtml(html) {
+  if (html) {
+    return html.replace(/[\u200B-\u200D\uFEFF]/g, "");
+  }
 }
 
-OpenXmlBuilder.convertHtml = convertHtml; 
+function convertHtml (html) {
+    var d = document.createElement("DIV");
+    var p = document.head || document.body;
+    p.appendChild(d);
+    d.innerHTML = cleanupHtml(html); 
+    var mblocker = new Blocker();
+    mblocker.procNodes({}, d.childNodes);
+    p.removeChild(d);
+    d = null;
+    return mblocker.getBlocks();
+}
+
+OpenXmlBuilder.convertHtml = convertHtml;
