@@ -786,7 +786,7 @@
       var slideLayoutObjects = this.zip.folder("ppt/slideLayouts").file(/^slideLayout\d+\.xml$/);
       for (var j = 0; j < slideLayoutObjects.length; j++) {
         var slo = slideLayoutObjects[j];
-        var slideLayoutId = parseInt(slo.name.slice(11, -4), 10);
+        var slideLayoutId = parseInt(slo.name.slice(28, -4), 10);
         var fullUri = "/ppt/slideLayouts/" + slo.name;
         var relUri = "../slideLayouts/" + slo.name;
         var slideLayout = new XDoc(slo.asText());
