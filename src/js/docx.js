@@ -29,7 +29,7 @@ function DOCXBuilder (b64Template, title, created, creator) {
     this.rStyles.Bold = this.rStyleBold;
     this.rStyles.Underline = this.rStyleUnderline;
 
-    var styles = this.getPart("/word/document/styles.xml").all("w:styles/w:style");
+    var styles = this.getPart("/word/styles.xml").all("w:styles/w:style");
     for (i = 0; i < styles.length; i++) {
       var styleType = styles[i].getAttr("w:type");
       var styleId = styles[i].getAttr("w:styleId");
@@ -39,7 +39,7 @@ function DOCXBuilder (b64Template, title, created, creator) {
         this.rStyles[styleId] = _valBuild("w:rStyle", styleId);
       }
     }
-    this.undoPart("/word/document/styles.xml");
+    this.undoPart("/word/styles.xml");
 }
 DOCXBuilder.prototype = {
     mimetype : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
