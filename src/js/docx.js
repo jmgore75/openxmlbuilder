@@ -22,6 +22,24 @@ function DOCXBuilder (b64Template, title, created, creator) {
     if (this.sectPr) {
         this.body.add(this.sectPr);
     }
+
+    this.rStyles = {};
+    this.pStyles = {};
+    this.rStyles.Italic = this.rStyleItalic;
+    this.rStyles.Bold = this.rStyleBold;
+    this.rStyles.Underline = this.rStyleUnderline;
+
+    var styles = this.getPart("/word/document/styles.xml").all("w:styles/w:style");
+    for (i = 0; i < styles.length; i++) {
+      var styleType = styles[i].getAttr("w:type");
+      var styleId = styles[i].getAttr("w:styleId");
+      if (styleType === "paragraph") {
+        this.pStyles[styleId] = _valBuild("w:pStyle", styleId);
+      } else if (styleType === "character") {
+        this.rStyles[styleId] = _valBuild("w:rStyle", styleId);
+      }
+    }
+    this.undoPart("/word/document/styles.xml");
 }
 DOCXBuilder.prototype = {
     mimetype : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -32,17 +50,10 @@ DOCXBuilder.prototype = {
     pStyleNoSpacing : _valBuild("w:pStyle", "NoSpacing"),
     pStyleListParagraph : _valBuild("w:pStyle", "ListParagraph"),
     pStyle : function (name) {
-        return _valBuild("w:pStyle", name);
+        return this.pStyles[name] || _valBuild("w:pStyle", name);
     },
     rStyle : function (name) {
-        if (name === "Italic") {
-            return this.rStyleItalic;
-        } else if (name === "Bold") {
-            return this.rStyleBold;
-        } else if (name === "Underline") {
-            return this.rStyleUnderline;
-        }
-        return _valBuild("w:rStyle", name);
+      return this.rStyles[name] || _valBuild("w:rStyle", name);
     },
     _levelIndent : function (level) {
         return 720 * (1 + (level ||0));
@@ -118,7 +129,7 @@ DOCXBuilder.prototype = {
         this._blocks(this.body, this.sectPr, blocks);
     },
     docChunk : function (html) {
-        html = "<html><head></head><body>" + cleanupHtml(html) + "</body></html>"; 
+        html = "<html><head></head><body>" + cleanupHtml(html) + "</body></html>";
         var rId = this.doc.nextRelationshipId();
         var uri = "/word/chunk"+rId+".html";
         this.addFile("text/html", uri, html);
