@@ -97,14 +97,15 @@ PPTXBuilder.prototype = {
 
       for (var j = 0; j < slideLayoutObjects.length; j++) {
         var slo = slideLayoutObjects[j];
-        var slideLayoutId = parseInt(slo.name.slice(28, -4), 10);
-        var fullUri = "/ppt/slideLayouts/" + slo.name;
-        var relUri = "../slideLayouts/" + slo.name;
+        var layoutXmlName = slo.name.slice(17);
+        var slideLayoutId = parseInt(layoutXmlName.slice(11, -4), 10);
+        var fullUri = "/" + slo.name;
+        var relUri = "../slideLayouts/" + layoutXmlName;
 
         var slideLayout = new XDoc(slo.asText());
-        var masterPath = new XDoc(this.zip.file("ppt/slideLayouts/_rels/" + slo.name + ".rels").asText())
+        var masterPath = new XDoc(this.zip.file("ppt/slideLayouts/_rels/" + layoutXmlName + ".rels").asText())
           .one("/rel:Relationships/rel:Relationship[@Type='" + relTypes.slideMaster + "']").getAttr("Target");
-        var slideMaster = this.getPart(this.fullPath(masterPath, slideLayout.path));
+        var slideMaster = this.getPart(this.fullPath(masterPath, fullUri));
         var layoutSections = [];
 
         var sld = slideLayout.root();
@@ -138,7 +139,7 @@ PPTXBuilder.prototype = {
         slideLayouts[layoutName] = {
           name : layoutName,
           index : slideLayoutId,
-          fileName : slo.name,
+          fileName : layoutXmlName,
           fullUri : fullUri,
           relUri : relUri,
           sections: layoutSections,

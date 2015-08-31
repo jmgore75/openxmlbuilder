@@ -786,12 +786,13 @@
       var slideLayoutObjects = this.zip.folder("ppt/slideLayouts").file(/^slideLayout\d+\.xml$/);
       for (var j = 0; j < slideLayoutObjects.length; j++) {
         var slo = slideLayoutObjects[j];
-        var slideLayoutId = parseInt(slo.name.slice(28, -4), 10);
-        var fullUri = "/ppt/slideLayouts/" + slo.name;
-        var relUri = "../slideLayouts/" + slo.name;
+        var layoutXmlName = slo.name.slice(17);
+        var slideLayoutId = parseInt(layoutXmlName.slice(11, -4), 10);
+        var fullUri = "/" + slo.name;
+        var relUri = "../slideLayouts/" + layoutXmlName;
         var slideLayout = new XDoc(slo.asText());
-        var masterPath = new XDoc(this.zip.file("ppt/slideLayouts/_rels/" + slo.name + ".rels").asText()).one("/rel:Relationships/rel:Relationship[@Type='" + relTypes.slideMaster + "']").getAttr("Target");
-        var slideMaster = this.getPart(this.fullPath(masterPath, slideLayout.path));
+        var masterPath = new XDoc(this.zip.file("ppt/slideLayouts/_rels/" + layoutXmlName + ".rels").asText()).one("/rel:Relationships/rel:Relationship[@Type='" + relTypes.slideMaster + "']").getAttr("Target");
+        var slideMaster = this.getPart(this.fullPath(masterPath, fullUri));
         var layoutSections = [];
         var sld = slideLayout.root();
         sld.removeAttr("preserve");
@@ -822,7 +823,7 @@
         slideLayouts[layoutName] = {
           name: layoutName,
           index: slideLayoutId,
-          fileName: slo.name,
+          fileName: layoutXmlName,
           fullUri: fullUri,
           relUri: relUri,
           sections: layoutSections,
@@ -1118,7 +1119,7 @@
     this.rStyles.Italic = this.rStyleItalic;
     this.rStyles.Bold = this.rStyleBold;
     this.rStyles.Underline = this.rStyleUnderline;
-    var styles = this.getPart("/word/document/styles.xml").all("w:styles/w:style");
+    var styles = this.getPart("/word/styles.xml").all("w:styles/w:style");
     for (i = 0; i < styles.length; i++) {
       var styleType = styles[i].getAttr("w:type");
       var styleId = styles[i].getAttr("w:styleId");
@@ -1128,7 +1129,7 @@
         this.rStyles[styleId] = _valBuild("w:rStyle", styleId);
       }
     }
-    this.undoPart("/word/document/styles.xml");
+    this.undoPart("/word/styles.xml");
   }
   DOCXBuilder.prototype = {
     mimetype: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
