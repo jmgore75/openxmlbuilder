@@ -4,12 +4,12 @@
  * Copyright (c) 2015 Jeremy Gore
  * Licensed MIT
  * https://github.com/jmgore75/openxmlbuilder
- * v0.1.0
+ * v0.1.1
  */
 (function(window, undefined) {
   "use strict";
   var OpenXmlBuilder = {};
-  OpenXmlBuilder.version = "0.1.0";
+  OpenXmlBuilder.version = "0.1.1";
   var ox = {};
   ox.xmlns = "http://www.w3.org/2000/xmlns/";
   ox.rel = "http://schemas.openxmlformats.org/package/2006/relationships";
@@ -684,11 +684,16 @@
       }
     }
   };
+  function cleanupHtml(html) {
+    if (html) {
+      return html.replace(/[\u200B-\u200D\uFEFF]/g, "");
+    }
+  }
   function convertHtml(html) {
     var d = document.createElement("DIV");
     var p = document.head || document.body;
     p.appendChild(d);
-    d.innerHTML = html;
+    d.innerHTML = cleanupHtml(html);
     var mblocker = new Blocker();
     mblocker.procNodes({}, d.childNodes);
     p.removeChild(d);
@@ -702,69 +707,28 @@
   contTypes.slide = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml";
   function PPTXBuilder(b64Template, title, created, creator) {
     XPkg.call(this, b64Template, title, created, creator);
-    this.slideCount = 0;
     this.presentation = this.getPart("/ppt/presentation.xml");
     this.sldIdLst = this.presentation.one("/p:presentation/p:sldIdLst");
-    var es = this.sldIdLst.all("./p:sldId");
-    for (var i = 0; i < es.length; i++) {
-      es[i].remove();
-    }
+    this.slideCount = this.sldIdLst.all("./p:sldId").length;
     this.app = this.getPart("/docProps/app.xml").xdoc;
     this.slidesProp = this.app.one("/ep:Properties/ep:Slides");
-    this.slidesProp.setValue("0");
     this.slidesTitlesProp = this.app.all("/ep:Properties/ep:HeadingPairs/vt:vector/vt:variant/vt:i4");
     this.slidesTitlesProp = this.slidesTitlesProp[this.slidesTitlesProp.length - 1];
-    this.slidesTitlesProp.setValue("0");
     this.titlesVector = this.app.one("/ep:Properties/ep:TitlesOfParts/vt:vector");
-    this.titlesVector.setAttr("size", "1");
-    es = this.titlesVector.all("./vt:lpstr");
-    for (i = 1; i < es.length; i++) {
-      es[i].remove();
-    }
-    var rels = this.presentation.getRelationshipsByRelationshipType(relTypes.slide);
-    var rel, part;
-    for (i = 0; i < rels.length; i++) {
-      rel = rels[i];
-      part = this.getPart(this.fullPath(rel.getAttr("Target"), this.presentation.path));
-      this.presentation.deleteRelationship(rel.relationshipId);
-      part.deleted = true;
-    }
+    this.removeAllSlides();
+    this.slideLayouts = this._findLayouts();
   }
   PPTXBuilder.prototype = {
     mimetype: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    addSlide: function(title, slideLayoutId) {
-      slideLayoutId = slideLayoutId || 2;
+    addSlide: function(title, slideLayout) {
+      slideLayout = slideLayout || this.slideLayouts["Title and Content"];
       this.slideCount++;
       var slideNum = this.slideCount;
       var sldId = slideNum + 255;
       title = title || "Slide " + slideNum;
       var slideUri = "slides/slide" + slideNum + ".xml";
-      var slideLayoutUri = "slideLayouts/slideLayout" + slideLayoutId + ".xml";
-      var slideLayout = this.getPart("/ppt/" + slideLayoutUri);
-      var sldTemplate = slideLayout.xdoc.toXmlString();
-      sldTemplate = sldTemplate.replace(/(<\/?p:sld)Layout/g, "$1");
-      var slide = this.addPart(contTypes.slide, "/ppt/" + slideUri, sldTemplate);
-      slide.addRelationship(slide.nextRelationshipId(), relTypes.slideLayout, "../" + slideLayoutUri, "Internal");
-      var sld = slide.xdoc.root();
-      sld.removeAttr("preserve");
-      sld.removeAttr("type");
-      sld.one("p:cSld").removeAttr("name");
-      var rel = slideLayout.getRelationshipsByRelationshipType(relTypes.slideMaster)[0];
-      var slideMaster = this.getPart(this.fullPath(rel.getAttr("Target"), slideLayout.path));
-      var hf = slideMaster.one("//p:hf");
-      if (hf) {
-        var shapes = slide.all("//p:sp");
-        var ph, phType;
-        for (var i = 0; i < shapes.length; i++) {
-          ph = shapes[i].one("./p:nvSpPr/p:nvPr/p:ph");
-          if (ph) {
-            phType = ph.getAttr("type");
-            if (phType && hf.getAttr(phType) === "0") {
-              shapes[i].remove();
-            }
-          }
-        }
-      }
+      var slide = this.addPart(contTypes.slide, "/ppt/" + slideUri, slideLayout.template);
+      slide.addRelationship(slide.nextRelationshipId(), relTypes.slideLayout, slideLayout.relUri, "Internal");
       var rId = this.presentation.nextRelationshipId();
       this.presentation.addRelationship(rId, relTypes.slide, slideUri, "Internal");
       this.sldIdLst.add(this.presentation.el("p:sldId", {
@@ -777,10 +741,9 @@
       this.titlesVector.setAttr("size", slideNum + 1);
       return slide;
     },
-    contentSlide: function(content, slideLayoutId) {
-      slideLayoutId = slideLayoutId || 2;
+    contentSlide: function(content, slideLayout) {
       var title = content.title || content["Title 1"];
-      var slide = this.addSlide(title, slideLayoutId);
+      var slide = this.addSlide(title, slideLayout);
       var shapes = slide.all("//p:sp");
       for (var i = 0; i < shapes.length; i++) {
         var spId = shapes[i].one("./p:nvSpPr/p:cNvPr").getAttr("name");
@@ -794,6 +757,79 @@
           }
         }
       }
+    },
+    removeAllSlides: function() {
+      var rels = this.presentation.getRelationshipsByRelationshipType(relTypes.slide);
+      var rel, part;
+      for (var i = 0; i < rels.length; i++) {
+        rel = rels[i];
+        part = this.getPart(this.fullPath(rel.getAttr("Target"), this.presentation.path));
+        this.presentation.deleteRelationship(rel.relationshipId);
+        part.deleted = true;
+      }
+      this.sldIdLst = this.presentation.one("/p:presentation/p:sldIdLst");
+      var es = this.sldIdLst.all("./p:sldId");
+      for (i = 0; i < es.length; i++) {
+        es[i].remove();
+      }
+      this.slidesProp.setValue("0");
+      this.slidesTitlesProp.setValue("0");
+      this.titlesVector.setAttr("size", "1");
+      es = this.titlesVector.all("./vt:lpstr");
+      for (i = 1; i < es.length; i++) {
+        es[i].remove();
+      }
+      this.slideCount = 0;
+    },
+    _findLayouts: function() {
+      var slideLayouts = {};
+      var slideLayoutObjects = this.zip.folder("/ppt/slideLayouts").file(/^slideLayout\d+\.xml$/);
+      for (var j = 0; j < slideLayoutObjects.length; j++) {
+        var slo = slideLayoutObjects[j];
+        var slideLayoutId = parseInt(slo.name.slice(11, -4), 10);
+        var fullUri = "/ppt/slideLayouts/" + slo.name;
+        var relUri = "../slideLayouts/" + slo.name;
+        var slideLayout = new XDoc(slo.asText());
+        var masterPath = new XDoc(this.zip.file("/ppt/slideLayouts/_rels/" + slo.name + ".rels").asText()).one("/rel:Relationships/rel:Relationship[@Type='" + relTypes.slideMaster + "']").getAttr("Target");
+        var slideMaster = this.getPart(this.fullPath(masterPath, slideLayout.path));
+        var layoutSections = [];
+        var sld = slideLayout.root();
+        sld.removeAttr("preserve");
+        sld.removeAttr("type");
+        var layoutName = sld.one("p:cSld").getAttr("name");
+        sld.one("p:cSld").removeAttr("name");
+        var hf = slideMaster.one("//p:hf");
+        var shapes = sld.all("//p:sp");
+        var ph, phType;
+        for (var i = 0; i < shapes.length; i++) {
+          if (hf) {
+            ph = shapes[i].one("./p:nvSpPr/p:nvPr/p:ph");
+            if (ph) {
+              phType = ph.getAttr("type");
+              if (phType && hf.getAttr(phType) === "0") {
+                shapes[i].remove();
+                continue;
+              }
+            }
+          }
+          var spId = shapes[i].one("./p:nvSpPr/p:cNvPr").getAttr("name");
+          if (spId) {
+            layoutSections.push(spId);
+          }
+        }
+        var sldTemplate = slideLayout.toXmlString();
+        sldTemplate = sldTemplate.replace(/(<\/?p:sld)Layout/g, "$1");
+        slideLayouts[layoutName] = {
+          name: layoutName,
+          index: slideLayoutId,
+          fileName: slo.name,
+          fullUri: fullUri,
+          relUri: relUri,
+          sections: layoutSections,
+          template: sldTemplate
+        };
+      }
+      return slideLayouts;
     },
     _block: function(slide, txBody, block, listType, level) {
       if (block.type === "list") {
@@ -1077,6 +1113,22 @@
     if (this.sectPr) {
       this.body.add(this.sectPr);
     }
+    this.rStyles = {};
+    this.pStyles = {};
+    this.rStyles.Italic = this.rStyleItalic;
+    this.rStyles.Bold = this.rStyleBold;
+    this.rStyles.Underline = this.rStyleUnderline;
+    var styles = this.getPart("/word/document/styles.xml").all("w:styles/w:style");
+    for (i = 0; i < styles.length; i++) {
+      var styleType = styles[i].getAttr("w:type");
+      var styleId = styles[i].getAttr("w:styleId");
+      if (styleType === "paragraph") {
+        this.pStyles[styleId] = _valBuild("w:pStyle", styleId);
+      } else if (styleType === "character") {
+        this.rStyles[styleId] = _valBuild("w:rStyle", styleId);
+      }
+    }
+    this.undoPart("/word/document/styles.xml");
   }
   DOCXBuilder.prototype = {
     mimetype: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -1091,17 +1143,10 @@
     pStyleNoSpacing: _valBuild("w:pStyle", "NoSpacing"),
     pStyleListParagraph: _valBuild("w:pStyle", "ListParagraph"),
     pStyle: function(name) {
-      return _valBuild("w:pStyle", name);
+      return this.pStyles[name] || _valBuild("w:pStyle", name);
     },
     rStyle: function(name) {
-      if (name === "Italic") {
-        return this.rStyleItalic;
-      } else if (name === "Bold") {
-        return this.rStyleBold;
-      } else if (name === "Underline") {
-        return this.rStyleUnderline;
-      }
-      return _valBuild("w:rStyle", name);
+      return this.rStyles[name] || _valBuild("w:rStyle", name);
     },
     _levelIndent: function(level) {
       return 720 * (1 + (level || 0));
@@ -1203,7 +1248,7 @@
       this._blocks(this.body, this.sectPr, blocks);
     },
     docChunk: function(html) {
-      html = "<html><head></head><body>" + html + "</body></html>";
+      html = "<html><head></head><body>" + cleanupHtml(html) + "</body></html>";
       var rId = this.doc.nextRelationshipId();
       var uri = "/word/chunk" + rId + ".html";
       this.addFile("text/html", uri, html);

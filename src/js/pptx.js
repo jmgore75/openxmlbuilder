@@ -34,7 +34,6 @@ PPTXBuilder.prototype = {
         var slide = this.addPart(contTypes.slide, "/ppt/" + slideUri, slideLayout.template);
 
         slide.addRelationship(slide.nextRelationshipId(), relTypes.slideLayout, slideLayout.relUri, "Internal");
-        var sld = slide.xdoc.root();
         var rId = this.presentation.nextRelationshipId();
         this.presentation.addRelationship(rId, relTypes.slide , slideUri, "Internal");
 
@@ -67,7 +66,7 @@ PPTXBuilder.prototype = {
     removeAllSlides : function () {
       var rels = this.presentation.getRelationshipsByRelationshipType(relTypes.slide);
       var rel, part;
-      for (i = 0; i < rels.length; i++) {
+      for (var i = 0; i < rels.length; i++) {
           rel = rels[i];
           part = this.getPart(this.fullPath(rel.getAttr("Target"), this.presentation.path));
           this.presentation.deleteRelationship(rel.relationshipId);
@@ -76,7 +75,7 @@ PPTXBuilder.prototype = {
 
       this.sldIdLst = this.presentation.one("/p:presentation/p:sldIdLst");
       var es = this.sldIdLst.all("./p:sldId");
-      for (var i = 0; i < es.length; i++) {
+      for (i = 0; i < es.length; i++) {
           es[i].remove();
       }
 
@@ -98,6 +97,7 @@ PPTXBuilder.prototype = {
 
       for (var j = 0; j < slideLayoutObjects.length; j++) {
         var slo = slideLayoutObjects[j];
+        var slideLayoutId = parseInt(slo.name.slice(11, -4), 10);
         var fullUri = "/ppt/slideLayouts/" + slo.name;
         var relUri = "../slideLayouts/" + slo.name;
 
@@ -114,7 +114,7 @@ PPTXBuilder.prototype = {
         sld.one("p:cSld").removeAttr("name");
 
         var hf = slideMaster.one("//p:hf");
-        var shapes = slide.all("//p:sp");
+        var shapes = sld.all("//p:sp");
         var ph, phType;
         for (var i = 0; i < shapes.length; i++) {
           if (hf) {

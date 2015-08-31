@@ -1,7 +1,7 @@
 {
   "name": "openxmlbuilder",
   "description": "The OpenXmlBuilder allows you to build simple OpenXml documents right in the browser.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": ["./dist/OpenXmlBuilder.js"],
   "keywords": ["openxml"],
   "license": "https://github.com/jmgore75/openxmlbuilder/blob/master/LICENSE",

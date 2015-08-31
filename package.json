@@ -1,13 +1,13 @@
 {
   "name": "openxmlbuilder",
   "title": "OpenXmlBuilder",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The OpenXmlBuilder allows you to build simple OpenXml documents right in the browser.",
   "keywords": [
     "openxml"
   ],
   "homepage": "https://github.com/jmgore75/openxmlbuilder",
-  "license" : "MIT", 
+  "license" : "MIT",
   "licenses": [
     {
       "type": "MIT",
