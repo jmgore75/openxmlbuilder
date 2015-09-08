@@ -617,7 +617,9 @@
     procNode: function(style, child) {
       var sblocker;
       if (child.nodeType === 3) {
-        this.addRun(style, child.nodeValue);
+        if (/\S/.test(child.nodeValue)) {
+          this.addRun(style, child.nodeValue);
+        }
       } else if (child.nodeType === 1) {
         var cssStyle = getStyle(child);
         if (cssStyle.display === "none") {

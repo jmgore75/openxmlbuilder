@@ -132,7 +132,9 @@ Blocker.prototype = {
     procNode: function (style, child) {
         var sblocker;
         if (child.nodeType === 3) {
+          if (/\S/.test(child.nodeValue)) {
             this.addRun(style, child.nodeValue);
+          }
         } else if (child.nodeType === 1) {
             var cssStyle = getStyle(child);
             if (cssStyle.display === "none") {
@@ -199,7 +201,7 @@ function convertHtml (html) {
     var d = document.createElement("DIV");
     var p = document.head || document.body;
     p.appendChild(d);
-    d.innerHTML = cleanupHtml(html); 
+    d.innerHTML = cleanupHtml(html);
     var mblocker = new Blocker();
     mblocker.procNodes({}, d.childNodes);
     p.removeChild(d);
