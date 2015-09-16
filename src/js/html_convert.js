@@ -147,8 +147,9 @@ Blocker.prototype = {
 
             if (child.tagName === "LI") {
                 this.breakBlock();
-                this.currentBlock().type = "list-item";
-                this.procNodes(cstyle, child.childNodes);
+                sblocker = new Blocker();
+                sblocker.procNodes(cstyle, child.childNodes);
+                this.blocks.push({type:"list-item", blocks:sblocker.getBlocks()});
             } else if (child.tagName === "OL" || child.tagName === "UL") {
                 this.breakBlock();
                 sblocker = new Blocker();
