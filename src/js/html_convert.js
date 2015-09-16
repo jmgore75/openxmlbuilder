@@ -155,14 +155,17 @@ Blocker.prototype = {
                 sblocker.procNodes(cstyle, child.childNodes);
                 this.blocks.push({type:"list", listType:child.tagName.toLowerCase(), blocks:sblocker.getBlocks()});
             } else if (child.tagName === "TABLE") {
+                this.breakBlock();
                 sblocker = new Blocker();
                 sblocker.procNodes(cstyle, child.childNodes);
-                this.blocks.push({type:"table", blocks:sblocker.blocks});
+                this.blocks.push({type:"table", blocks:sblocker.getBlocks()});
             } else if (child.tagName === "TR") {
+                this.breakBlock();
                 sblocker = new Blocker();
                 sblocker.procNodes(cstyle, child.childNodes);
-                this.blocks.push({type:"table-row", blocks:sblocker.blocks});
+                this.blocks.push({type:"table-row", blocks:sblocker.getBlocks()});
             } else if (child.tagName === "TD" || child.tagName === "TH") {
+                this.breakBlock();
                 sblocker = new Blocker();
                 sblocker.procNodes(cstyle, child.childNodes);
                 this.blocks.push({type:"table-cell", blocks:sblocker.getBlocks()});
