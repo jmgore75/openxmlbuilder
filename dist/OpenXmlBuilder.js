@@ -630,8 +630,12 @@
         }
         if (child.tagName === "LI") {
           this.breakBlock();
-          this.currentBlock().type = "list-item";
-          this.procNodes(cstyle, child.childNodes);
+          sblocker = new Blocker();
+          sblocker.procNodes(cstyle, child.childNodes);
+          this.blocks.push({
+            type: "list-item",
+            blocks: sblocker.getBlocks()
+          });
         } else if (child.tagName === "OL" || child.tagName === "UL") {
           this.breakBlock();
           sblocker = new Blocker();
@@ -642,20 +646,23 @@
             blocks: sblocker.getBlocks()
           });
         } else if (child.tagName === "TABLE") {
+          this.breakBlock();
           sblocker = new Blocker();
           sblocker.procNodes(cstyle, child.childNodes);
           this.blocks.push({
             type: "table",
-            blocks: sblocker.blocks
+            blocks: sblocker.getBlocks()
           });
         } else if (child.tagName === "TR") {
+          this.breakBlock();
           sblocker = new Blocker();
           sblocker.procNodes(cstyle, child.childNodes);
           this.blocks.push({
             type: "table-row",
-            blocks: sblocker.blocks
+            blocks: sblocker.getBlocks()
           });
         } else if (child.tagName === "TD" || child.tagName === "TH") {
+          this.breakBlock();
           sblocker = new Blocker();
           sblocker.procNodes(cstyle, child.childNodes);
           this.blocks.push({
@@ -705,6 +712,177 @@
   relTypes.slideLayout = relTypePrefix + "slideLayout";
   relTypes.slide = relTypePrefix + "slide";
   contTypes.slide = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml";
+  function PPTXContentWriter(slide, txBody) {
+    this.slide = slide;
+    this.txBody = txBody;
+    var ps = this.txBody.all("./a:p");
+    for (var j = 0; j < ps.length; j++) {
+      ps[j].remove();
+    }
+    this.listStack = [];
+    this.listItem = false;
+  }
+  PPTXContentWriter.prototype = {
+    block: function(block) {
+      if (block.type === "list") {
+        this.listStack.unshift(block.listType || "ul");
+        this.blocks(block.blocks);
+        this.listStack.shift();
+      } else if (block.type === "table") {
+        this.inlineTable(block);
+      } else if (block.type === "list-item") {
+        this.listItem = true;
+        this.blocks(block.blocks);
+        this.listItem = false;
+      } else {
+        this.paragraph(block);
+      }
+    },
+    blocks: function(blocks) {
+      for (var i = 0; i < blocks.length; i++) {
+        this.block(blocks[i]);
+      }
+    },
+    runs: function(parent, runs) {
+      var run, r, rPr, t, rId;
+      var lastLink;
+      for (var i = 0; i < runs.length; i++) {
+        run = runs[i];
+        r = this.slide.el("a:r");
+        lastLink = run.link;
+        if (run.b || run.i || run.u || run.color || run.link) {
+          rPr = this.slide.el("a:rPr");
+          if (run.b) {
+            rPr.setAttr("b", "1");
+          }
+          if (run.i) {
+            rPr.setAttr("i", "1");
+          }
+          if (run.u) {
+            rPr.setAttr("u", "sng");
+          }
+          if (run.color) {
+            rPr.add(this.slide.el("a:solidFill").add(this.slide.el("a:srgbClr", {
+              val: run.color
+            })));
+          }
+          if (run.link) {
+            rId = this.slide.nextRelationshipId();
+            this.slide.addRelationship(rId, relTypes.hyperlink, run.link, "External");
+            rPr.add(this.slide.el("a:hlinkClick", {
+              "r:id": rId
+            }));
+          }
+          r.add(rPr);
+        }
+        t = this.slide.el("a:t", run.text);
+        r.add(t);
+        parent.add(r);
+      }
+      if (lastLink) {
+        parent.add(this.slide.el("a:endParaRPr").add(this.slide.el("a:hlinkClick", {
+          "r:id": ""
+        })));
+      }
+    },
+    paragraph: function(paragraph, indent) {
+      var runs = paragraph.runs || [];
+      var level = this.listStack.length;
+      var listType;
+      if (indent || level) {
+        if (level > 0) {
+          if (this.listItem) {
+            listType = this.listStack[0];
+            if (!runs.length) {
+              runs = [ {
+                text: " "
+              } ];
+            }
+            this.listItem = false;
+          }
+        }
+        if (indent) {
+          level += indent;
+        }
+      }
+      var pPr = this.slide.el("a:pPr");
+      if (level > 1) {
+        pPr.setAttr("lvl", level - 1);
+      }
+      if (listType === "ol") {
+        pPr.add(this.slide.el("a:buAutoNum", {
+          type: "arabicPeriod"
+        }));
+      } else if (!listType) {
+        pPr.add(this.slide.el("a:buNone"));
+      }
+      var p = this.slide.el("a:p");
+      p.add(pPr);
+      if (!listType && level > 0) {
+        p.add(this.slide.el("a:r").add(this.slide.el("a:t", "	")));
+      }
+      this.runs(p, runs);
+      this.txBody.add(p);
+    },
+    inlineTable: function(table) {
+      var i, j, cind, cspan, rspan, row, cell;
+      var colspans = {};
+      var spanned = function() {
+        while (colspans[cind]) {
+          cspan = colspans[cind][1] || 1;
+          rspan = colspans[cind][0];
+          if (colspans[cind][0]) {
+            colspans[cind][0] -= 1;
+          } else {
+            delete colspans[cind];
+          }
+          cind += cspan;
+        }
+      };
+      this.paragraph({
+        runs: [ {
+          u: true,
+          i: true,
+          text: "Table"
+        } ]
+      });
+      this.listStack.unshift("ul");
+      for (i = 0; i < table.blocks.length; i++) {
+        row = table.blocks[i];
+        this.listItem = true;
+        this.paragraph({
+          runs: [ {
+            u: true,
+            i: true,
+            text: "Row " + (row + 1)
+          } ]
+        });
+        this.listStack.unshift("ul");
+        cind = 0;
+        for (j = 0; j < row.blocks.length; j++) {
+          spanned();
+          cell = row.blocks[j];
+          cspan = cell.colspan || 1;
+          rspan = cell.rowspan;
+          this.listItem = true;
+          this.paragraph({
+            runs: [ {
+              i: true,
+              text: "Column" + (cind + 1)
+            } ]
+          });
+          this.blocks(cell);
+          if (rspan > 1) {
+            colspans[cind] = [ rspan - 1, cspan || 1 ];
+          }
+          cind += cspan;
+        }
+        spanned();
+        this.listStack.shift();
+      }
+      this.listStack.shift();
+    }
+  };
   function PPTXBuilder(b64Template, title, created, creator) {
     XPkg.call(this, b64Template, title, created, creator);
     this.presentation = this.getPart("/ppt/presentation.xml");
@@ -832,142 +1010,6 @@
       }
       return slideLayouts;
     },
-    _block: function(slide, txBody, block, listType, level) {
-      if (block.type === "list") {
-        listType = block.listType || "ul";
-        level = level >= 0 ? level += 1 : 0;
-        this._blocks(slide, txBody, block.blocks, listType, level);
-      } else if (block.type === "table") {
-        this._inlineTable(slide, txBody, block);
-      } else if (block.type === "list-item") {
-        this._paragraph(slide, txBody, block, listType, level);
-      } else {
-        this._paragraph(slide, txBody, block, null, level);
-      }
-    },
-    _blocks: function(slide, txBody, blocks, listType, level) {
-      for (var i = 0; i < blocks.length; i++) {
-        this._block(slide, txBody, blocks[i], listType, level);
-      }
-    },
-    _runs: function(slide, parent, runs) {
-      var run, r, rPr, t, rId;
-      var lastLink;
-      for (var i = 0; i < runs.length; i++) {
-        run = runs[i];
-        r = slide.el("a:r");
-        lastLink = run.link;
-        if (run.b || run.i || run.u || run.color || run.link) {
-          rPr = slide.el("a:rPr");
-          if (run.b) {
-            rPr.setAttr("b", "1");
-          }
-          if (run.i) {
-            rPr.setAttr("i", "1");
-          }
-          if (run.u) {
-            rPr.setAttr("u", "sng");
-          }
-          if (run.color) {
-            rPr.add(slide.el("a:solidFill").add(slide.el("a:srgbClr", {
-              val: run.color
-            })));
-          }
-          if (run.link) {
-            rId = slide.nextRelationshipId();
-            slide.addRelationship(rId, relTypes.hyperlink, run.link, "External");
-            rPr.add(slide.el("a:hlinkClick", {
-              "r:id": rId
-            }));
-          }
-          r.add(rPr);
-        }
-        t = slide.el("a:t", run.text);
-        r.add(t);
-        parent.add(r);
-      }
-      if (lastLink) {
-        parent.add(slide.el("a:endParaRPr").add(slide.el("a:hlinkClick", {
-          "r:id": ""
-        })));
-      }
-    },
-    _paragraph: function(slide, parent, paragraph, listType, level) {
-      var p, pPr;
-      p = slide.el("a:p");
-      if (level >= 0 || listType !== "ul") {
-        pPr = slide.el("a:pPr");
-        p.add(pPr);
-        if (level > 0) {
-          pPr.setAttr("lvl", level);
-        }
-        if (listType === "ol") {
-          pPr.add(slide.el("a:buAutoNum", {
-            type: "arabicPeriod"
-          }));
-        } else if (!listType) {
-          pPr.add(slide.el("a:buNone"));
-        }
-        if (!listType && level >= 0) {
-          p.add(slide.el("a:r").add(slide.el("a:t", "	")));
-        }
-      }
-      this._runs(slide, p, paragraph.runs);
-      parent.add(p);
-    },
-    _inlineTable: function(slide, parent, table, listType, level) {
-      var i, j, cind, cspan, rspan, row, cell;
-      var colspans = {};
-      var spanned = function() {
-        while (colspans[cind]) {
-          cspan = colspans[cind][1] || 1;
-          rspan = colspans[cind][0];
-          if (colspans[cind][0]) {
-            colspans[cind][0] -= 1;
-          } else {
-            delete colspans[cind];
-          }
-          cind += cspan;
-        }
-      };
-      this._paragraph(slide, parent, {
-        runs: [ {
-          u: true,
-          i: true,
-          text: "Table"
-        } ]
-      }, listType, level);
-      level = (level || 0) + 1;
-      for (i = 0; i < table.blocks.length; i++) {
-        row = table.blocks[i];
-        this._paragraph(slide, parent, {
-          runs: [ {
-            u: true,
-            i: true,
-            text: "Row " + (row + 1)
-          } ]
-        }, null, level);
-        cind = 0;
-        for (j = 0; j < row.blocks.length; j++) {
-          spanned();
-          cell = row.blocks[j];
-          cspan = cell.colspan || 1;
-          rspan = cell.rowspan;
-          this._paragraph(slide, parent, {
-            runs: [ {
-              i: true,
-              text: "Column" + (cind + 1)
-            } ]
-          }, null, level + 1);
-          this._blocks(slide, parent, cell, null, level + 1);
-          if (rspan > 1) {
-            colspans[cind] = [ rspan - 1, cspan || 1 ];
-          }
-          cind += cspan;
-        }
-        spanned();
-      }
-    },
     _table: function(slide, parent, table) {
       var i, j, k, row, cell, r, c, e, cspan, rspan, cind;
       var tbl = slide.el("a:tbl");
@@ -1020,7 +1062,8 @@
           }
           e = phTxbody();
           c.add(e);
-          this._blocks(e, cell.blocks);
+          var writer = new PPTXContentWriter(slide, e);
+          writer.blocks(cell.blocks);
           e = slide.el("a:tcPr");
           c.add(e);
           cind += cspan;
@@ -1031,21 +1074,13 @@
       parent.add(tbl);
     },
     pptContent: function(slide, shape, blocks) {
-      var txBody = shape.one("./p:txBody");
-      var ps = txBody.all("./a:p");
-      for (var j = 0; j < ps.length; j++) {
-        ps[j].remove();
-      }
-      this._blocks(slide, txBody, blocks);
+      var writer = new PPTXContentWriter(slide, shape.one("./p:txBody"));
+      writer.blocks(blocks);
     },
     pptLine: function(slide, shape, block) {
-      var txBody = shape.one("./p:txBody");
-      var ps = txBody.all("./a:p");
-      for (var j = 0; j < ps.length; j++) {
-        ps[j].remove();
-      }
+      var writer = new PPTXContentWriter(slide, shape.one("./p:txBody"));
       if (block.type === "paragraph") {
-        this._paragraph(slide, txBody, block);
+        writer.paragraph(block);
       } else {
         throw "Block is not a paragraph";
       }
@@ -1150,7 +1185,7 @@
       return this.rStyles[name] || _valBuild("w:rStyle", name);
     },
     _levelIndent: function(level) {
-      return 720 * (1 + (level || 0));
+      return 720 * (level || 0);
     },
     makeUl: function() {
       return this.makeList([ {
@@ -1203,7 +1238,7 @@
       depth = depth || levels.length;
       for (var i = 0; i < depth; i++) {
         level = levels[i % levels.length];
-        idt = this._levelIndent(i);
+        idt = this._levelIndent(i + 1);
         lvl = numPart.el("w:lvl").setAttr("w:ilvl", i);
         lvl.add(numPart.el("w:start").setAttr("w:val", "1"));
         lvl.add(numPart.el("w:numFmt").setAttr("w:val", level.fmt));
@@ -1246,7 +1281,12 @@
     },
     docContent: function(html) {
       var blocks = convertHtml(html);
-      this._blocks(this.body, this.sectPr, blocks);
+      var listTracker = {
+        id: undefined,
+        level: 0,
+        item: false
+      };
+      this._blocks(this.body, this.sectPr, blocks, listTracker);
     },
     docChunk: function(html) {
       html = "<html><head></head><body>" + cleanupHtml(html) + "</body></html>";
@@ -1257,33 +1297,49 @@
       var chunk = this.doc.el("w:altChunk").setAttr("r:id", rId);
       this.body.add(chunk, this.sectPr);
     },
-    _block: function(parent, before, block, listid, level) {
-      var pPrs;
+    _block: function(parent, before, block, listTracker) {
       if (block.type === "table") {
+        if (listTracker.id && listTracker.item) {
+          this._block(parent, before, {
+            type: "paragraph",
+            runs: [ {
+              text: "Table",
+              i: true
+            } ]
+          }, listTracker);
+        }
         this._table(parent, before, block);
       } else if (block.type === "list") {
-        if (!listid) {
-          listid = block.listType === "ul" ? this.makeUl() : this.makeOlHier();
-          level = 0;
-        } else {
-          level += 1;
+        if (!listTracker.id) {
+          listTracker.id = block.listType === "ul" ? this.makeUl() : this.makeOlHier();
         }
-        this._blocks(parent, before, block.blocks, listid, level);
-      } else if (block.type === "list-item" && listid) {
-        pPrs = this.doc.el("w:numPr");
-        pPrs.add(_valBuild("w:ilvl", level)(this.doc.xdoc));
-        pPrs.add(_valBuild("w:numId", listid)(this.doc.xdoc));
-        this._paragraph(parent, before, block, null, null, pPrs);
-      } else if (listid) {
-        pPrs = this.doc.el("w:ind").setAttr("w:left", this._levelIndent(level));
+        listTracker.level++;
+        this._blocks(parent, before, block.blocks, listTracker);
+        listTracker.level--;
+        if (!listTracker.level) {
+          listTracker.id = undefined;
+        }
+      } else if (block.type === "list-item") {
+        listTracker.item = true;
+        this._blocks(parent, before, block.blocks, listTracker);
+        listTracker.item = false;
+      } else if (listTracker.id) {
+        var pPrs;
+        if (listTracker.item) {
+          pPrs = this.doc.el("w:numPr");
+          pPrs.add(_valBuild("w:ilvl", listTracker.level - 1)(this.doc.xdoc));
+          pPrs.add(_valBuild("w:numId", listTracker.id)(this.doc.xdoc));
+        } else {
+          pPrs = this.doc.el("w:ind").setAttr("w:left", this._levelIndent(listTracker.level));
+        }
         this._paragraph(parent, before, block, this.pStyleListParagraph, null, pPrs);
       } else {
         this._paragraph(parent, before, block);
       }
     },
-    _blocks: function(parent, before, blocks, listid, level) {
+    _blocks: function(parent, before, blocks, listTracker) {
       for (var i = 0; i < blocks.length; i++) {
-        this._block(parent, before, blocks[i], listid, level);
+        this.block(parent, before, blocks[i], listTracker);
       }
     },
     _runs: function(parent, runs, rStyle) {
