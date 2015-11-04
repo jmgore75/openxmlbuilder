@@ -131,7 +131,7 @@
       node.setAttributeNode(a);
     }
   };
-  var xhelp = window.DOMParser ? EGHelper : IEHelper;
+  var xhelp = window.ActiveXObject ? IEHelper : EGHelper;
   OpenXmlBuilder.XMLHelper = xhelp;
   function openXmlISOString(date) {
     function pad2(number) {

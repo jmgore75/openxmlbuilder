@@ -138,7 +138,7 @@ var IEHelper = {
   }
 };
 
-var xhelp = window.DOMParser ? EGHelper : IEHelper;
+var xhelp = window.ActiveXObject ? IEHelper : EGHelper;
 OpenXmlBuilder.XMLHelper = xhelp;
 
 function openXmlISOString(date) {
